@@ -31,9 +31,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include<algorithm>
 #include"basecase/squareSort.hxx"
 
-#define TYPE int
+#define TYPE long int
 
-#define ILP 2
+#define ILP 1
+#define BUFF 8
 
 template<typename T, fptr_t f>
 __global__ void bitonicKernel(T* data, int N) {
@@ -65,6 +66,13 @@ __forceinline__ __device__ void cmpSwapRev(T* data, int idx1, int idx2) {
     data[idx1+i] = v1[i];
     data[idx2-i] = v2[i];
   }
+}
+
+template<typename T, fptr_t f>
+__forceinline__ __device__ void cmpSwapRegs(T* a, T* b) {
+	T temp = *a;
+	*a = *b;
+	*b = temp;
 }
 
 template<typename T, fptr_t f>
@@ -137,12 +145,39 @@ __global__ void swapAllBlock(T* data, int N, int dist) {
 template<typename T, fptr_t f>
 __global__ void swapAll(T* data, int N, int dist) {
   int globalId = threadIdx.x + blockIdx.x*blockDim.x;
-
+//int i=0;
   for(int i=0; i<N; i+=M*dist*2) {
-    for(int j=globalId*ILP; j<M*dist; j+=gridDim.x*blockDim.x*ILP) {
+//    for(int j=globalId*ILP; j<M*dist; j+=gridDim.x*blockDim.x*ILP) {
+    int j=globalId;
+    if(j < M*dist)
       cmpSwap<T,f>(data, i+j, M*dist+i+j);
     }
-  }
+//  }
+}
+
+template<typename T, fptr_t f>
+__global__ void swapAllRevRegs(T* data, int N, int dist) {
+	int globalId = threadIdx.x + blockIdx.x*blockDim.x;
+	int count=0;
+	T buff1[BUFF];
+	T buff2[BUFF];
+	for(int i=0; i<N; i+=M*dist*2) {
+		for(int j=globalId*ILP; j<M*dist; j+=gridDim.x*blockDim.x*ILP) {
+			buff1[count] = data[i+j];
+			buff2[count] = data[i+(M*dist*2)-j-1];
+			count++;
+			if(count == BUFF-1) {
+				for(int k=0; k<count; k++) {
+					cmpSwapRegs<T,f>(buff1+i, buff2+i);
+				}
+				for(int k=0; k<count; k++) {
+					data[i+j - (k*gridDim.x*blockDim.x)] = buff1[i];
+					data[i+(M*dist*2)-j-1 + (k*gridDim.x*blockDim.x)] = buff2[i];
+				}
+				count = 0;
+			}
+		}
+	}
 }
 
 template<typename T, fptr_t f>
@@ -175,6 +210,7 @@ void bitonicSort(T* data, int N, int BLOCKS, int THREADS) {
   for(int i=1; i<levels; i++) {
 	  
     swapAllRev<T,f><<<BLOCKS,THREADS>>>(data,N,roundDist);
+//    swapAllRevRegs<T,f><<<BLOCKS,THREADS>>>(data,N,roundDist);
     cudaDeviceSynchronize();
     subDist = roundDist/2;
     for(int j=i-1; j>0; j--) {	
@@ -184,8 +220,8 @@ void bitonicSort(T* data, int N, int BLOCKS, int THREADS) {
       subDist /=2;
     }
 
-    squareSort<T,f><<<BLOCKS,32>>>(data, N);
-    cudaDeviceSynchronize();
+//    squareSort<T,f><<<BLOCKS,32>>>(data, N);
+//    cudaDeviceSynchronize();
     roundDist *=2;
   }
 
@@ -218,5 +254,5 @@ void bitonicSort(T* data, int N, int BLOCKS, int THREADS) {
 */
 //  bitonicKernel<T,f><<<baseBlocks,THREADS>>>(data, N);
 
-  printf("%d\n", cudaDeviceSynchronize());
+  cudaDeviceSynchronize();
 }

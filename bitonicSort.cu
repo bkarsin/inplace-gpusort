@@ -35,7 +35,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //#define DEBUG 1
 
-#define TYPE int
+//#define TYPE long int
 
 
 template<typename T>
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 
   cudaEvent_t start, stop;
   float time_elapsed=0.0;
-  int N = atoi(argv[1]);
+  int N = pow(2,atoi(argv[1]));
   int BLOCKS = atoi(argv[2]);
   int THREADS = atoi(argv[3]);
 

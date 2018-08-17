@@ -7,7 +7,7 @@ GENCODE_SM52	:= -gencode arch=compute_52,code=sm_52
 
 #UPDATE THE GENCODE HERE FOR YOUR PARTICULAR HARDWARE
 
-OPTIONS=-std=c++11  -lineinfo -use_fast_math --expt-extended-lambda -Xptxas -dlcm=cg -lcudart -D_FORCE_INLINES $(GENCODE_SM52)
+OPTIONS=-std=c++11 -use_fast_math --expt-extended-lambda -Xptxas -dlcm=cg -lcudart -D_FORCE_INLINES $(GENCODE_SM52)
 
 default: bitonicSort
 
